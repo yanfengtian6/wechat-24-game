@@ -1,0 +1,18 @@
+{
+  "appid": "touristappid",
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "miniprogramRoot": "./",
+  "projectname": "wechat-24-game",
+  "description": "原生微信小程序 24 点扑克小游戏",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true
+  },
+  "packOptions": {
+    "ignore": []
+  }
+}

@@ -1,0 +1,59 @@
+<view class="page home-page">
+  <view class="hero-table">
+    <view class="brand-row">
+      <view class="logo-card">
+        <text class="logo-rank">24</text>
+        <text class="logo-suit">♠</text>
+      </view>
+      <view class="brand-copy">
+        <text class="eyebrow">POKER PUZZLE</text>
+        <text class="title">24 点扑克</text>
+        <text class="subtitle">四张牌，三步运算，刚好拼出 24。</text>
+      </view>
+    </view>
+
+    <view class="cards-fan" aria-label="扑克展示">
+      <view class="fan-card fan-card-one red">
+        <text>A</text>
+        <text>♥</text>
+      </view>
+      <view class="fan-card fan-card-two black">
+        <text>8</text>
+        <text>♣</text>
+      </view>
+      <view class="fan-card fan-card-three red">
+        <text>Q</text>
+        <text>♦</text>
+      </view>
+      <view class="fan-card fan-card-four black">
+        <text>5</text>
+        <text>♠</text>
+      </view>
+    </view>
+
+    <view class="score-board">
+      <text class="score-label">本机最高分</text>
+      <text class="score-value">{{highestScore}}</text>
+    </view>
+
+    <view class="home-actions">
+      <button class="primary-button" bindtap="startGame">开始游戏</button>
+      <button class="ghost-button" bindtap="openHelp">查看帮助</button>
+    </view>
+  </view>
+
+  <view class="rule-strip">
+    <view class="rule-item">
+      <text class="rule-number">1</text>
+      <text>每题自动保证有解</text>
+    </view>
+    <view class="rule-item">
+      <text class="rule-number">2</text>
+      <text>按选择顺序做减法和除法</text>
+    </view>
+    <view class="rule-item">
+      <text class="rule-number">3</text>
+      <text>解出后自动累计得分</text>
+    </view>
+  </view>
+</view>

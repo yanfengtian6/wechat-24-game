@@ -1,0 +1,78 @@
+<view class="page game-page">
+  <view class="score-strip">
+    <view class="score-cell">
+      <text class="score-name">得分</text>
+      <text class="score-number">{{score}}</text>
+    </view>
+    <view class="score-cell">
+      <text class="score-name">最高分</text>
+      <text class="score-number">{{highestScore}}</text>
+    </view>
+    <view class="score-cell">
+      <text class="score-name">题目</text>
+      <text class="score-number">{{round}}</text>
+    </view>
+  </view>
+
+  <view class="table-panel">
+    <view class="table-head">
+      <text class="table-title">目标 24</text>
+      <text class="table-state">{{isSolved ? "已完成" : "进行中"}}</text>
+    </view>
+
+    <view class="operand-grid">
+      <button
+        wx:for="{{operands}}"
+        wx:key="id"
+        class="operand {{item.color}} {{item.selected ? 'selected' : ''}} {{item.isResult ? 'result' : ''}}"
+        bindtap="onSelect"
+        data-id="{{item.id}}"
+        disabled="{{isSolved}}"
+      >
+        <view wx:if="{{!item.isResult}}" class="corner top-left">
+          <text>{{item.label}}</text>
+          <text>{{item.suit}}</text>
+        </view>
+        <view class="card-face">
+          <text class="rank">{{item.label}}</text>
+          <text wx:if="{{!item.isResult}}" class="suit">{{item.suit}}</text>
+        </view>
+        <view wx:if="{{!item.isResult}}" class="corner bottom-right">
+          <text>{{item.label}}</text>
+          <text>{{item.suit}}</text>
+        </view>
+        <text wx:if="{{item.isResult}}" class="result-expr">{{item.expr}}</text>
+      </button>
+    </view>
+  </view>
+
+  <view class="selection-bar">
+    <text>{{selectedText}}</text>
+  </view>
+
+  <view class="ops-grid">
+    <button class="op-button" bindtap="onOperate" data-op="+">+</button>
+    <button class="op-button" bindtap="onOperate" data-op="-">-</button>
+    <button class="op-button" bindtap="onOperate" data-op="*">×</button>
+    <button class="op-button" bindtap="onOperate" data-op="/">÷</button>
+  </view>
+
+  <view class="action-grid">
+    <button class="ghost-button" bindtap="undo">撤销</button>
+    <button class="ghost-button" bindtap="restartRound">重开</button>
+    <button class="ghost-button" bindtap="showHint">提示</button>
+    <button class="plain-button" bindtap="startNewRound">下一题</button>
+  </view>
+
+  <view class="status-panel {{isSolved ? 'success' : ''}}">
+    <text>{{statusText}}</text>
+  </view>
+
+  <view class="move-panel" wx:if="{{moveLogs.length}}">
+    <text class="move-title">步骤</text>
+    <view class="move-line" wx:for="{{moveLogs}}" wx:key="*this">
+      <text>{{index + 1}}.</text>
+      <text>{{item}}</text>
+    </view>
+  </view>
+</view>

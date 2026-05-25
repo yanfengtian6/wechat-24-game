@@ -1,0 +1,50 @@
+<view class="page help-page">
+  <view class="help-header">
+    <text class="help-title">怎么玩</text>
+    <text class="help-subtitle">把四张牌全部用完，通过加、减、乘、除得到 24。</text>
+  </view>
+
+  <view class="help-section">
+    <text class="section-title">规则</text>
+    <view class="help-line">
+      <text class="badge">1</text>
+      <text>每张牌只能使用一次，A 计作 1，J/Q/K 分别计作 11/12/13。</text>
+    </view>
+    <view class="help-line">
+      <text class="badge">2</text>
+      <text>先点两张牌，再点运算符，系统会把结果作为新的牌放回牌桌。</text>
+    </view>
+    <view class="help-line">
+      <text class="badge">3</text>
+      <text>减法和除法按选择顺序计算，例如先选 8 再选 3，就是 8 - 3 或 8 ÷ 3。</text>
+    </view>
+    <view class="help-line">
+      <text class="badge">4</text>
+      <text>最后只剩一个数且等于 24 时，本题完成并累计得分。</text>
+    </view>
+  </view>
+
+  <view class="help-section">
+    <text class="section-title">按钮</text>
+    <view class="button-grid">
+      <view class="button-note">
+        <text class="button-name">撤销</text>
+        <text>回到上一步。</text>
+      </view>
+      <view class="button-note">
+        <text class="button-name">重开</text>
+        <text>用同一题重新开始。</text>
+      </view>
+      <view class="button-note">
+        <text class="button-name">提示</text>
+        <text>查看本题的一组可行解。</text>
+      </view>
+      <view class="button-note">
+        <text class="button-name">下一题</text>
+        <text>换一组自动保证有解的新牌。</text>
+      </view>
+    </view>
+  </view>
+
+  <button class="primary-button" bindtap="startGame">开始游戏</button>
+</view>

@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/game/game",
+    "pages/help/help"
+  ],
+  "window": {
+    "navigationBarTitleText": "24 点扑克",
+    "navigationBarBackgroundColor": "#f7f1e3",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f1e3"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
