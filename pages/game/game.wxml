@@ -25,14 +25,14 @@
   <view class="table-panel">
     <view class="table-head">
       <text class="table-title">目标 24</text>
-      <text class="table-state">{{isSolved ? "已完成" : "进行中"}}</text>
+      <text class="table-state">{{tableStateText}}</text>
     </view>
 
     <view class="operand-grid">
       <button
         wx:for="{{operands}}"
         wx:key="id"
-        class="operand {{item.color}} {{item.selected ? 'selected' : ''}} {{item.isResult ? 'result' : ''}}"
+        class="operand {{item.className}}"
         bindtap="onSelect"
         data-id="{{item.id}}"
         disabled="{{isSolved}}"
@@ -74,7 +74,7 @@
 
   <button class="voice-button" bindtap="voiceTodo" bindlongpress="voiceTodo">按住说答案（敬请期待）</button>
 
-  <view class="status-panel {{isSolved ? 'success' : ''}}">
+  <view class="{{statusPanelClass}}">
     <text>{{statusText}}</text>
   </view>
 

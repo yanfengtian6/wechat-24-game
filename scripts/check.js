@@ -15,6 +15,13 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function run(command, args) {
+  execFileSync(command, args, {
+    cwd: root,
+    stdio: "pipe"
+  });
+}
+
 function checkFiles() {
   const requiredFiles = [
     "app.js",
@@ -39,21 +46,21 @@ function checkFiles() {
 
   requiredFiles.forEach((file) => {
     const fullPath = path.join(root, file);
-    assert(fs.existsSync(fullPath), `缺少文件: ${file}`);
-    assert(fs.statSync(fullPath).size > 0, `文件为空: ${file}`);
+    assert(fs.existsSync(fullPath), `Missing file: ${file}`);
+    assert(fs.statSync(fullPath).size > 0, `Empty file: ${file}`);
   });
 
   const appJson = readJson(path.join(root, "app.json"));
-  assert(appJson.pages.includes("pages/index/index"), "app.json 缺少首页");
-  assert(appJson.pages.includes("pages/game/game"), "app.json 缺少游戏页");
-  assert(appJson.pages.includes("pages/help/help"), "app.json 缺少帮助页");
+  assert(appJson.pages.includes("pages/index/index"), "app.json missing index page");
+  assert(appJson.pages.includes("pages/game/game"), "app.json missing game page");
+  assert(appJson.pages.includes("pages/help/help"), "app.json missing help page");
 
   appJson.pages.forEach((pagePath) => {
     [".js", ".json", ".wxml", ".wxss"].forEach((extension) => {
       const file = `${pagePath}${extension}`;
       const fullPath = path.join(root, file);
-      assert(fs.existsSync(fullPath), `app.json 注册页面缺少文件: ${file}`);
-      assert(fs.statSync(fullPath).size > 0, `app.json 注册页面文件为空: ${file}`);
+      assert(fs.existsSync(fullPath), `Registered page file missing: ${file}`);
+      assert(fs.statSync(fullPath).size > 0, `Registered page file empty: ${file}`);
     });
   });
 }
@@ -90,10 +97,51 @@ function checkSyntax() {
   ];
 
   jsFiles.forEach((file) => {
-    execFileSync(process.execPath, ["--check", path.join(root, file)], {
-      stdio: "pipe"
-    });
+    run(process.execPath, ["--check", path.join(root, file)]);
   });
+}
+
+function findDevToolsCompiler(fileName) {
+  const candidates = [];
+  const programFilesX86 = process.env["ProgramFiles(x86)"];
+  const programFiles = process.env.ProgramFiles;
+  const localAppData = process.env.LOCALAPPDATA;
+
+  if (programFilesX86) {
+    candidates.push(
+      path.join(programFilesX86, "Tencent", "微信web开发者工具", "code", "package.nw", "node_modules", "wcc-exec", fileName)
+    );
+  }
+
+  if (programFiles) {
+    candidates.push(
+      path.join(programFiles, "Tencent", "微信web开发者工具", "code", "package.nw", "node_modules", "wcc-exec", fileName)
+    );
+  }
+
+  if (localAppData) {
+    candidates.push(
+      path.join(localAppData, "微信开发者工具", "code", "package.nw", "node_modules", "wcc-exec", fileName)
+    );
+  }
+
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
+function checkMiniProgramCompiler() {
+  const appJson = readJson(path.join(root, "app.json"));
+  const wxmlFiles = appJson.pages.map((pagePath) => `${pagePath}.wxml`);
+  const wxssFiles = ["app.wxss"].concat(appJson.pages.map((pagePath) => `${pagePath}.wxss`));
+  const wcc = findDevToolsCompiler("wcc.exe");
+  const wcsc = findDevToolsCompiler("wcsc.exe");
+
+  if (wcc) {
+    run(wcc, wxmlFiles);
+  }
+
+  if (wcsc) {
+    run(wcsc, wxssFiles);
+  }
 }
 
 function checkSolver() {
@@ -106,25 +154,26 @@ function checkSolver() {
   ];
 
   solvedCases.forEach((numbers) => {
-    assert(solver.solver24(numbers), `求解失败: ${numbers.join(",")}`);
+    assert(solver.solver24(numbers), `Solver failed: ${numbers.join(",")}`);
   });
 
-  assert(solver.solve24([1, 1, 1, 1]) === null, "无解题误判为有解");
+  assert(solver.solve24([1, 1, 1, 1]) === null, "Unsolvable case detected as solvable");
 
   for (let i = 0; i < 100; i += 1) {
     const problem = solver.generateProblem();
     const values = problem.cards.map((card) => card.value);
-    assert(problem.solution, "生成题目缺少答案");
-    assert(solver.solve24(values), `生成了无解题: ${values.join(",")}`);
+    assert(problem.solution, "Generated problem missing solution");
+    assert(solver.solve24(values), `Generated unsolvable problem: ${values.join(",")}`);
   }
 
-  assert(solver.isTwentyFour(solver.calculate(20, 4, "+")), "加法计算异常");
-  assert(solver.calculate(1, 0, "/") === null, "除零未被拦截");
+  assert(solver.isTwentyFour(solver.calculate(20, 4, "+")), "Addition calculation failed");
+  assert(solver.calculate(1, 0, "/") === null, "Division by zero was not blocked");
 }
 
 checkFiles();
 checkJson();
 checkSyntax();
+checkMiniProgramCompiler();
 checkSolver();
 
-console.log("检查通过：项目文件、JS 语法和 24 点求解器均正常。");
+console.log("Check passed: files, JSON, JS syntax, Mini Program compiler, and solver are OK.");

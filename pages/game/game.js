@@ -4,6 +4,20 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function copyOperand(operand) {
+  return {
+    id: operand.id,
+    label: operand.label,
+    value: operand.value,
+    suit: operand.suit,
+    color: operand.color,
+    expr: operand.expr,
+    selected: operand.selected,
+    isResult: operand.isResult,
+    className: operand.className || ""
+  };
+}
+
 function displayOperand(operand) {
   return operand.isResult ? operand.label : `${operand.label}${operand.suit}`;
 }
@@ -41,6 +55,8 @@ Page({
     selectedText: "请选择两张牌",
     moveLogs: [],
     statusText: "点击两张牌，再选择运算符。",
+    tableStateText: "进行中",
+    statusPanelClass: "status-panel",
     solution: "",
     isSolved: false
   },
@@ -107,7 +123,8 @@ Page({
       color: card.color,
       expr: solver.formatValue(card.value),
       selected: false,
-      isResult: false
+      isResult: false,
+      className: card.color
     }));
 
     this.history = [];
@@ -120,6 +137,8 @@ Page({
       selectedText: "请选择两张牌",
       moveLogs: [],
       statusText: "点击两张牌，再选择运算符。",
+      tableStateText: "进行中",
+      statusPanelClass: "status-panel",
       solution: problem.solution,
       isSolved: false,
       elapsedSeconds: 0,
@@ -140,14 +159,18 @@ Page({
     this.history = [];
     this.roundStartedAt = Date.now();
     this.setData({
-      operands: clone(this.data.originalCards).map((card) => ({
-        ...card,
-        selected: false
-      })),
+      operands: clone(this.data.originalCards).map((card) => {
+        const nextCard = copyOperand(card);
+        nextCard.selected = false;
+        nextCard.className = `${nextCard.color}${nextCard.isResult ? " result" : ""}`;
+        return nextCard;
+      }),
       selectedIds: [],
       selectedText: "本题已重开",
       moveLogs: [],
       statusText: "重新选择两张牌开始运算。",
+      tableStateText: "进行中",
+      statusPanelClass: "status-panel",
       isSolved: false,
       elapsedSeconds: 0,
       elapsedTimeText: "0s"
@@ -178,9 +201,18 @@ Page({
 
   applySelection(selectedIds) {
     const operands = this.data.operands.map((operand) => ({
-      ...operand,
+      id: operand.id,
+      label: operand.label,
+      value: operand.value,
+      suit: operand.suit,
+      color: operand.color,
+      expr: operand.expr,
+      isResult: operand.isResult,
       selected: selectedIds.indexOf(operand.id) >= 0
     }));
+    operands.forEach((operand) => {
+      operand.className = `${operand.color}${operand.selected ? " selected" : ""}${operand.isResult ? " result" : ""}`;
+    });
     const selectedOperands = selectedIds
       .map((id) => operands.find((operand) => operand.id === id))
       .filter(Boolean);
@@ -268,19 +300,27 @@ Page({
     const moveLogs = this.data.moveLogs.concat(
       `${displayOperand(left)} ${symbol} ${displayOperand(right)} = ${label}`
     );
+    operands.forEach((operand) => {
+      operand.className = `${operand.color}${operand.selected ? " selected" : ""}${operand.isResult ? " result" : ""}`;
+    });
+
     const solved = operands.length === 1 && solver.isTwentyFour(resultValue);
     const failed = operands.length === 1 && !solved;
+    let statusText = "继续选择两张牌。";
+    if (solved) {
+      statusText = `成功得到 24：${expr}`;
+    } else if (failed) {
+      statusText = "最后结果不是 24，可以撤销或重开。";
+    }
 
     this.setData({
       operands,
       selectedIds: [],
       selectedText: "请选择两张牌",
       moveLogs,
-      statusText: solved
-        ? `成功得到 24：${expr}`
-        : failed
-          ? "最后结果不是 24，可以撤销或重开。"
-          : "继续选择两张牌。",
+      statusText,
+      tableStateText: solved ? "已完成" : "进行中",
+      statusPanelClass: solved ? "status-panel success" : "status-panel",
       isSolved: solved
     });
 
