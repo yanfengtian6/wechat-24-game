@@ -28,8 +28,12 @@ function isTwentyFour(value) {
   return Math.abs(value - TARGET) < EPSILON;
 }
 
+function isNearInteger(value) {
+  return Math.abs(value - Math.round(value)) < EPSILON;
+}
+
 function formatValue(value) {
-  if (Math.abs(value - Math.round(value)) < EPSILON) {
+  if (isNearInteger(value)) {
     return String(Math.round(value));
   }
 
@@ -72,60 +76,107 @@ function operatorLabel(operator) {
   return operator;
 }
 
+function stripOuterParens(expr) {
+  if (!expr || expr[0] !== "(" || expr[expr.length - 1] !== ")") {
+    return expr;
+  }
+
+  let depth = 0;
+  for (let i = 0; i < expr.length; i += 1) {
+    if (expr[i] === "(") {
+      depth += 1;
+    } else if (expr[i] === ")") {
+      depth -= 1;
+      if (depth === 0 && i !== expr.length - 1) {
+        return expr;
+      }
+    }
+  }
+
+  return expr.slice(1, -1);
+}
+
 function buildCandidates(left, right) {
   const items = [
     {
       value: left.value + right.value,
-      expr: `(${left.expr} + ${right.expr})`
+      expr: `(${left.expr} + ${right.expr})`,
+      step: `${left.expr} + ${right.expr} = ${formatValue(left.value + right.value)}`
     },
     {
       value: left.value * right.value,
-      expr: `(${left.expr} × ${right.expr})`
+      expr: `(${left.expr} × ${right.expr})`,
+      step: `${left.expr} × ${right.expr} = ${formatValue(left.value * right.value)}`
     },
     {
       value: left.value - right.value,
-      expr: `(${left.expr} - ${right.expr})`
+      expr: `(${left.expr} - ${right.expr})`,
+      step: `${left.expr} - ${right.expr} = ${formatValue(left.value - right.value)}`
     },
     {
       value: right.value - left.value,
-      expr: `(${right.expr} - ${left.expr})`
+      expr: `(${right.expr} - ${left.expr})`,
+      step: `${right.expr} - ${left.expr} = ${formatValue(right.value - left.value)}`
     }
   ];
 
   if (Math.abs(right.value) >= EPSILON) {
+    const value = left.value / right.value;
     items.push({
-      value: left.value / right.value,
-      expr: `(${left.expr} ÷ ${right.expr})`
+      value,
+      expr: `(${left.expr} ÷ ${right.expr})`,
+      step: `${left.expr} ÷ ${right.expr} = ${formatValue(value)}`
     });
   }
 
   if (Math.abs(left.value) >= EPSILON) {
+    const value = right.value / left.value;
     items.push({
-      value: right.value / left.value,
-      expr: `(${right.expr} ÷ ${left.expr})`
+      value,
+      expr: `(${right.expr} ÷ ${left.expr})`,
+      step: `${right.expr} ÷ ${left.expr} = ${formatValue(value)}`
     });
   }
 
   return items;
 }
 
-function memoKey(items) {
-  return items
-    .map((item) => Number(item.value.toFixed(6)))
-    .sort((left, right) => left - right)
-    .join(",");
+function makeMergedItem(left, right, candidate) {
+  const negativeSteps =
+    (left.negativeSteps || 0) +
+    (right.negativeSteps || 0) +
+    (candidate.value < -EPSILON ? 1 : 0);
+  const fractionSteps =
+    (left.fractionSteps || 0) +
+    (right.fractionSteps || 0) +
+    (!isNearInteger(candidate.value) ? 1 : 0);
+
+  return {
+    value: candidate.value,
+    expr: candidate.expr,
+    negativeSteps,
+    fractionSteps,
+    steps: (left.steps || []).concat(right.steps || []).concat(candidate.step)
+  };
 }
 
-function search(items, memo) {
+function scoreSolution(item) {
+  const parenCount = (item.expr.match(/\(/g) || []).length;
+
+  return (
+    item.negativeSteps * 1000 +
+    item.fractionSteps * 100 +
+    parenCount * 8 +
+    item.expr.length
+  );
+}
+
+function collectSolutions(items) {
   if (items.length === 1) {
-    return isTwentyFour(items[0].value) ? items[0].expr : null;
+    return isTwentyFour(items[0].value) ? [items[0]] : [];
   }
 
-  const key = memoKey(items);
-  if (memo.has(key)) {
-    return null;
-  }
-  memo.add(key);
+  let solutions = [];
 
   for (let i = 0; i < items.length; i += 1) {
     for (let j = i + 1; j < items.length; j += 1) {
@@ -135,30 +186,111 @@ function search(items, memo) {
       const candidates = buildCandidates(left, right);
 
       for (let k = 0; k < candidates.length; k += 1) {
-        const candidate = candidates[k];
-        const solution = search(rest.concat(candidate), memo);
-
-        if (solution) {
-          return solution;
-        }
+        const merged = makeMergedItem(left, right, candidates[k]);
+        solutions = solutions.concat(collectSolutions(rest.concat(merged)));
       }
     }
   }
 
-  return null;
+  return solutions;
 }
 
-function solve24(numbers) {
-  if (!Array.isArray(numbers) || numbers.length !== 4) {
+function itemsFromNumbers(numbers) {
+  return numbers.map((value) => ({
+    value,
+    expr: formatValue(value),
+    steps: [],
+    negativeSteps: 0,
+    fractionSteps: 0
+  }));
+}
+
+function itemsFromCards(cards) {
+  return cards.map((card) => ({
+    value: card.value,
+    expr: card.rank,
+    steps: [],
+    negativeSteps: 0,
+    fractionSteps: 0
+  }));
+}
+
+function pickBestSolution(solutions) {
+  if (!solutions.length) {
     return null;
   }
 
-  const items = numbers.map((value) => ({
-    value,
-    expr: formatValue(value)
-  }));
+  const ranked = solutions
+    .slice()
+    .sort((left, right) => scoreSolution(left) - scoreSolution(right));
 
-  return search(items, new Set());
+  const best = ranked[0];
+  const expr = stripOuterParens(best.expr);
+
+  return {
+    expr,
+    steps: best.steps || [],
+    negativeSteps: best.negativeSteps,
+    score: scoreSolution(best)
+  };
+}
+
+function findBestSolution(numbers, cards) {
+  const items = cards ? itemsFromCards(cards) : itemsFromNumbers(numbers);
+  const solutions = collectSolutions(items);
+  return pickBestSolution(solutions);
+}
+
+function normalizeDisplayExpr(expr) {
+  let result = expr;
+
+  while (/\(\d+(?:\.\d+)?\)/.test(result)) {
+    result = result.replace(/\((\d+(?:\.\d+)?)\)/g, "$1");
+  }
+
+  return result;
+}
+
+function formatHintSteps(steps) {
+  const valueByExpr = {};
+
+  return steps.map((step) => {
+    const matched = step.match(/^(.+)\s=\s(-?\d+(?:\.\d+)?)$/);
+    if (!matched) {
+      return step;
+    }
+
+    let left = matched[1];
+    const result = matched[2];
+    const exprKeys = Object.keys(valueByExpr).sort((a, b) => b.length - a.length);
+
+    exprKeys.forEach((expr) => {
+      const value = valueByExpr[expr];
+      left = left.split(`(${expr})`).join(value);
+      left = left.split(expr).join(value);
+    });
+
+    valueByExpr[matched[1]] = result;
+    return `${normalizeDisplayExpr(left)} = ${result}`;
+  });
+}
+
+function formatHintText(hint) {
+  if (!hint) {
+    return "这题暂时没有提示。";
+  }
+
+  if (hint.steps && hint.steps.length) {
+    const lines = formatHintSteps(hint.steps).map((step, index) => `${index + 1}. ${step}`);
+    return `推荐步骤：\n${lines.join("\n")}\n\n完整式：${hint.expr} = 24`;
+  }
+
+  return `${hint.expr} = 24`;
+}
+
+function solve24(numbers) {
+  const hint = findBestSolution(numbers);
+  return hint ? hint.expr : null;
 }
 
 function randomItem(items) {
@@ -201,17 +333,30 @@ function generateProblem(maxAttempts) {
       createRandomCard(),
       createRandomCard()
     ];
-    const solution = solve24(cards.map((card) => card.value));
+    const hint = findBestSolution(
+      cards.map((card) => card.value),
+      cards
+    );
 
-    if (solution) {
-      return { cards, solution };
+    if (hint) {
+      return {
+        cards,
+        solution: hint.expr,
+        hintText: formatHintText(hint)
+      };
     }
   }
 
   const fallbackCards = cardsFromValues([3, 3, 8, 8]);
+  const hint = findBestSolution(
+    fallbackCards.map((card) => card.value),
+    fallbackCards
+  );
+
   return {
     cards: fallbackCards,
-    solution: solve24(fallbackCards.map((card) => card.value))
+    solution: hint ? hint.expr : null,
+    hintText: formatHintText(hint)
   };
 }
 
@@ -219,6 +364,8 @@ module.exports = {
   TARGET,
   EPSILON,
   calculate,
+  findBestSolution,
+  formatHintText,
   formatValue,
   generateProblem,
   isTwentyFour,

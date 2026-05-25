@@ -27,12 +27,13 @@ button::after {
 
 .page {
   min-height: 100vh;
-  padding: 32rpx;
+  padding: 24rpx 28rpx 32rpx;
 }
 
 .primary-button,
 .ghost-button,
 .plain-button {
+  width: 100%;
   min-height: 92rpx;
   border-radius: 18rpx;
   display: flex;

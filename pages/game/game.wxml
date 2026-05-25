@@ -25,44 +25,60 @@
   <view class="table-panel">
     <view class="table-head">
       <text class="table-title">目标 24</text>
-      <text class="table-state">{{tableStateText}}</text>
+      <text class="table-state {{tableStateClass}}">{{tableStateText}}</text>
     </view>
 
-    <view class="operand-grid">
-      <button
+    <view class="{{operandGridClass}}">
+      <view
         wx:for="{{operands}}"
         wx:key="id"
         class="operand {{item.className}}"
         bindtap="onSelect"
         data-id="{{item.id}}"
-        disabled="{{isSolved}}"
       >
         <view wx:if="{{!item.isResult}}" class="corner top-left">
           <text>{{item.label}}</text>
           <text>{{item.suit}}</text>
         </view>
-        <view class="card-face">
-          <text class="rank">{{item.label}}</text>
-          <text wx:if="{{!item.isResult}}" class="suit">{{item.suit}}</text>
+        <view class="card-body">
+          <view class="card-face">
+            <text class="rank">{{item.label}}</text>
+            <text wx:if="{{!item.isResult}}" class="suit">{{item.suit}}</text>
+          </view>
+          <text wx:if="{{item.isResult}}" class="result-expr">{{item.expr}}</text>
         </view>
         <view wx:if="{{!item.isResult}}" class="corner bottom-right">
           <text>{{item.label}}</text>
           <text>{{item.suit}}</text>
         </view>
-        <text wx:if="{{item.isResult}}" class="result-expr">{{item.expr}}</text>
-      </button>
+      </view>
     </view>
   </view>
 
-  <view class="selection-bar">
-    <text>{{selectedText}}</text>
+  <view class="{{statusPanelClass}}">
+    <text>{{guideText}}</text>
   </view>
 
-  <view class="ops-grid">
-    <button class="op-button" bindtap="onOperate" data-op="+">+</button>
-    <button class="op-button" bindtap="onOperate" data-op="-">-</button>
-    <button class="op-button" bindtap="onOperate" data-op="*">×</button>
-    <button class="op-button" bindtap="onOperate" data-op="/">÷</button>
+  <view class="ops-section {{opsDisabled ? 'is-disabled' : ''}}">
+    <text class="section-label">四则运算</text>
+    <view class="ops-grid">
+      <view class="op-cell {{opsDisabled ? 'disabled' : ''}}" bindtap="onOperate" data-op="+">
+        <text class="op-symbol">+</text>
+        <text class="op-name">加</text>
+      </view>
+      <view class="op-cell {{opsDisabled ? 'disabled' : ''}}" bindtap="onOperate" data-op="-">
+        <text class="op-symbol">−</text>
+        <text class="op-name">减</text>
+      </view>
+      <view class="op-cell {{opsDisabled ? 'disabled' : ''}}" bindtap="onOperate" data-op="*">
+        <text class="op-symbol">×</text>
+        <text class="op-name">乘</text>
+      </view>
+      <view class="op-cell {{opsDisabled ? 'disabled' : ''}}" bindtap="onOperate" data-op="/">
+        <text class="op-symbol">÷</text>
+        <text class="op-name">除</text>
+      </view>
+    </view>
   </view>
 
   <view class="action-grid">
@@ -72,12 +88,6 @@
     <button class="plain-button" bindtap="startNewRound">换一题</button>
   </view>
 
-  <button class="voice-button" bindtap="voiceTodo" bindlongpress="voiceTodo">按住说答案（敬请期待）</button>
-
-  <view class="{{statusPanelClass}}">
-    <text>{{statusText}}</text>
-  </view>
-
   <view class="move-panel" wx:if="{{moveLogs.length}}">
     <text class="move-title">步骤</text>
     <view class="move-line" wx:for="{{moveLogs}}" wx:key="*this">
@@ -85,4 +95,6 @@
       <text>{{item}}</text>
     </view>
   </view>
+
+  <text class="voice-link" bindtap="voiceTodo">语音输入（敬请期待）</text>
 </view>

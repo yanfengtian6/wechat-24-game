@@ -31,8 +31,37 @@
     }
   },
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": ".git"
+      },
+      {
+        "type": "folder",
+        "value": "node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "scripts"
+      },
+      {
+        "type": "folder",
+        "value": "docs"
+      },
+      {
+        "type": "glob",
+        "value": ".git/**"
+      }
+    ],
     "include": []
+  },
+  "watchOptions": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "scripts/**",
+      "docs/**"
+    ]
   },
   "simulatorPluginLibVersion": {},
   "editorSetting": {}

@@ -35,6 +35,47 @@ function formatTime(seconds) {
   return `${seconds}s`;
 }
 
+function buildPresentation({ operands, selectedIds, isSolved, isFailed, statusText }) {
+  const count = operands.length;
+  const gridCount = Math.max(Math.min(count, 4), 1);
+  const opsDisabled = isSolved || isFailed || count < 2;
+  const tableStateText = isSolved ? "已完成" : isFailed ? "未达成" : "进行中";
+  const tableStateClass = isSolved ? "state-done" : isFailed ? "state-fail" : "state-playing";
+  const statusPanelClass = isSolved
+    ? "hint-bar success"
+    : isFailed
+      ? "hint-bar fail"
+      : "hint-bar";
+
+  let guideText = statusText || "";
+  if (isFailed && operands[0]) {
+    guideText = `结果是 ${operands[0].label}，不是 24。请撤销、重开或换一题。`;
+  } else if (!isSolved && !isFailed) {
+    if (selectedIds.length === 0) {
+      guideText = "点击两张牌，再选运算符";
+    } else if (selectedIds.length === 1) {
+      const selected = operands.find((item) => item.id === selectedIds[0]);
+      guideText = selected ? `已选 ${displayOperand(selected)}，再选一张` : "点击两张牌，再选运算符";
+    } else {
+      const left = operands.find((item) => item.id === selectedIds[0]);
+      const right = operands.find((item) => item.id === selectedIds[1]);
+      guideText =
+        left && right
+          ? `顺序：${displayOperand(left)} → ${displayOperand(right)}，请选运算`
+          : "点击两张牌，再选运算符";
+    }
+  }
+
+  return {
+    operandGridClass: `operand-grid grid-${gridCount}`,
+    opsDisabled,
+    tableStateText,
+    tableStateClass,
+    statusPanelClass,
+    guideText
+  };
+}
+
 Page({
   history: [],
   roundStartedAt: 0,
@@ -52,13 +93,18 @@ Page({
     operands: [],
     originalCards: [],
     selectedIds: [],
-    selectedText: "请选择两张牌",
     moveLogs: [],
-    statusText: "点击两张牌，再选择运算符。",
+    guideText: "点击两张牌，再选运算符",
+    statusText: "",
     tableStateText: "进行中",
-    statusPanelClass: "status-panel",
+    tableStateClass: "state-playing",
+    statusPanelClass: "hint-bar",
+    operandGridClass: "operand-grid grid-4",
+    opsDisabled: false,
     solution: "",
-    isSolved: false
+    answerHint: "",
+    isSolved: false,
+    isFailed: false
   },
 
   onLoad() {
@@ -67,7 +113,7 @@ Page({
   },
 
   onShow() {
-    if (this.data.operands.length && !this.data.isSolved) {
+    if (this.data.operands.length && !this.data.isSolved && !this.data.isFailed) {
       this.startTimer();
     }
   },
@@ -91,10 +137,27 @@ Page({
     });
   },
 
+  setRoundState(patch) {
+    const operands = patch.operands !== undefined ? patch.operands : this.data.operands;
+    const selectedIds = patch.selectedIds !== undefined ? patch.selectedIds : this.data.selectedIds;
+    const isSolved = patch.isSolved !== undefined ? patch.isSolved : this.data.isSolved;
+    const isFailed = patch.isFailed !== undefined ? patch.isFailed : this.data.isFailed;
+    const statusText = patch.statusText !== undefined ? patch.statusText : this.data.statusText;
+    const presentation = buildPresentation({
+      operands,
+      selectedIds,
+      isSolved,
+      isFailed,
+      statusText
+    });
+
+    this.setData(Object.assign({}, patch, presentation));
+  },
+
   startTimer() {
     this.stopTimer();
     this.timer = setInterval(() => {
-      if (!this.roundStartedAt || this.data.isSolved) {
+      if (!this.roundStartedAt || this.data.isSolved || this.data.isFailed) {
         return;
       }
 
@@ -129,18 +192,17 @@ Page({
 
     this.history = [];
     this.roundStartedAt = Date.now();
-    this.setData({
+    this.setRoundState({
       level: this.data.level + 1,
       operands: clone(originalCards),
       originalCards,
       selectedIds: [],
-      selectedText: "请选择两张牌",
       moveLogs: [],
-      statusText: "点击两张牌，再选择运算符。",
-      tableStateText: "进行中",
-      statusPanelClass: "status-panel",
+      statusText: "",
       solution: problem.solution,
+      answerHint: problem.hintText,
       isSolved: false,
+      isFailed: false,
       elapsedSeconds: 0,
       elapsedTimeText: "0s"
     });
@@ -158,7 +220,7 @@ Page({
 
     this.history = [];
     this.roundStartedAt = Date.now();
-    this.setData({
+    this.setRoundState({
       operands: clone(this.data.originalCards).map((card) => {
         const nextCard = copyOperand(card);
         nextCard.selected = false;
@@ -166,12 +228,10 @@ Page({
         return nextCard;
       }),
       selectedIds: [],
-      selectedText: "本题已重开",
       moveLogs: [],
-      statusText: "重新选择两张牌开始运算。",
-      tableStateText: "进行中",
-      statusPanelClass: "status-panel",
+      statusText: "",
       isSolved: false,
+      isFailed: false,
       elapsedSeconds: 0,
       elapsedTimeText: "0s"
     });
@@ -179,11 +239,15 @@ Page({
   },
 
   onSelect(event) {
-    if (this.data.isSolved) {
+    if (this.data.isSolved || this.data.isFailed) {
       return;
     }
 
     const id = event.currentTarget.dataset.id;
+    if (!id) {
+      return;
+    }
+
     const selectedIds = this.data.selectedIds.slice();
     const existedIndex = selectedIds.indexOf(id);
 
@@ -196,10 +260,6 @@ Page({
       selectedIds.push(id);
     }
 
-    this.applySelection(selectedIds);
-  },
-
-  applySelection(selectedIds) {
     const operands = this.data.operands.map((operand) => ({
       id: operand.id,
       label: operand.label,
@@ -213,27 +273,16 @@ Page({
     operands.forEach((operand) => {
       operand.className = `${operand.color}${operand.selected ? " selected" : ""}${operand.isResult ? " result" : ""}`;
     });
-    const selectedOperands = selectedIds
-      .map((id) => operands.find((operand) => operand.id === id))
-      .filter(Boolean);
 
-    let selectedText = "请选择两张牌";
-    if (selectedOperands.length === 1) {
-      selectedText = `已选择 ${displayOperand(selectedOperands[0])}`;
-    }
-    if (selectedOperands.length === 2) {
-      selectedText = `顺序：${displayOperand(selectedOperands[0])} -> ${displayOperand(selectedOperands[1])}`;
-    }
-
-    this.setData({
+    this.setRoundState({
       operands,
       selectedIds,
-      selectedText
+      statusText: ""
     });
   },
 
   onOperate(event) {
-    if (this.data.isSolved) {
+    if (this.data.isSolved || this.data.isFailed || this.data.opsDisabled) {
       return;
     }
 
@@ -256,7 +305,10 @@ Page({
         title: "选择已失效",
         icon: "none"
       });
-      this.applySelection([]);
+      this.setRoundState({
+        selectedIds: [],
+        statusText: ""
+      });
       return;
     }
 
@@ -272,10 +324,10 @@ Page({
     this.history.push({
       operands: clone(this.data.operands),
       selectedIds: clone(this.data.selectedIds),
-      selectedText: this.data.selectedText,
       moveLogs: clone(this.data.moveLogs),
-      statusText: this.data.statusText,
-      isSolved: this.data.isSolved
+      isSolved: this.data.isSolved,
+      isFailed: this.data.isFailed,
+      statusText: this.data.statusText
     });
 
     const label = solver.formatValue(resultValue);
@@ -306,26 +358,20 @@ Page({
 
     const solved = operands.length === 1 && solver.isTwentyFour(resultValue);
     const failed = operands.length === 1 && !solved;
-    let statusText = "继续选择两张牌。";
-    if (solved) {
-      statusText = `成功得到 24：${expr}`;
-    } else if (failed) {
-      statusText = "最后结果不是 24，可以撤销或重开。";
-    }
 
-    this.setData({
+    this.setRoundState({
       operands,
       selectedIds: [],
-      selectedText: "请选择两张牌",
       moveLogs,
-      statusText,
-      tableStateText: solved ? "已完成" : "进行中",
-      statusPanelClass: solved ? "status-panel success" : "status-panel",
-      isSolved: solved
+      isSolved: solved,
+      isFailed: failed,
+      statusText: solved ? `成功得到 24：${expr}` : ""
     });
 
     if (solved) {
       this.finishRound(expr);
+    } else if (failed) {
+      this.stopTimer();
     }
   },
 
@@ -380,13 +426,19 @@ Page({
     }
 
     const snapshot = this.history.pop();
-    this.setData(snapshot);
+    this.setRoundState(snapshot);
+
+    if (!snapshot.isSolved && !snapshot.isFailed) {
+      this.startTimer();
+    } else {
+      this.stopTimer();
+    }
   },
 
   showHint() {
     wx.showModal({
       title: "提示答案",
-      content: this.data.solution || "这题暂时没有提示。",
+      content: this.data.answerHint || this.data.solution || "这题暂时没有提示。",
       confirmText: "知道了",
       showCancel: false
     });

@@ -168,6 +168,17 @@ function checkSolver() {
 
   assert(solver.isTwentyFour(solver.calculate(20, 4, "+")), "Addition calculation failed");
   assert(solver.calculate(1, 0, "/") === null, "Division by zero was not blocked");
+
+  const uglyCase = solver.findBestSolution([3, 6, 11, 13], [
+    { rank: "3", value: 3 },
+    { rank: "6", value: 6 },
+    { rank: "J", value: 11 },
+    { rank: "K", value: 13 }
+  ]);
+  assert(uglyCase, "Hint solver failed for 3,6,J,K");
+  assert(uglyCase.negativeSteps === 0, `Hint should avoid negative steps: ${uglyCase.expr}`);
+  assert(!/6\s*-\s*J/.test(uglyCase.expr), `Hint should not use 6 - J: ${uglyCase.expr}`);
+  assert(solver.formatHintText(uglyCase).includes("推荐步骤"), "Hint text should include steps");
 }
 
 checkFiles();
