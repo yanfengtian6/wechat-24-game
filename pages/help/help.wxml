@@ -40,11 +40,15 @@
         <text>查看本题的一组可行解。</text>
       </view>
       <view class="button-note">
-        <text class="button-name">下一题</text>
+        <text class="button-name">换一题</text>
         <text>换一组自动保证有解的新牌。</text>
+      </view>
+      <view class="button-note">
+        <text class="button-name">按住说答案</text>
+        <text>V1.0 仅占位，语音识别敬请期待。</text>
       </view>
     </view>
   </view>
 
-  <button class="primary-button" bindtap="startGame">开始游戏</button>
+  <button class="primary-button" bindtap="startGame">开始闯关</button>
 </view>

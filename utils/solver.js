@@ -223,5 +223,6 @@ module.exports = {
   generateProblem,
   isTwentyFour,
   operatorLabel,
+  solver24: solve24,
   solve24
 };

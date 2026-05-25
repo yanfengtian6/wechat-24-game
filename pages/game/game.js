@@ -8,13 +8,33 @@ function displayOperand(operand) {
   return operand.isResult ? operand.label : `${operand.label}${operand.suit}`;
 }
 
+function readNumber(key) {
+  const value = Number(wx.getStorageSync(key) || 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function formatTime(seconds) {
+  if (!seconds) {
+    return "--";
+  }
+
+  return `${seconds}s`;
+}
+
 Page({
   history: [],
+  roundStartedAt: 0,
+  timer: null,
 
   data: {
-    score: 0,
-    highestScore: 0,
-    round: 0,
+    level: 0,
+    sessionCorrect: 0,
+    highestLevel: 0,
+    totalCorrect: 0,
+    fastestTime: 0,
+    fastestTimeText: "--",
+    elapsedSeconds: 0,
+    elapsedTimeText: "0s",
     operands: [],
     originalCards: [],
     selectedIds: [],
@@ -26,9 +46,55 @@ Page({
   },
 
   onLoad() {
-    const highestScore = wx.getStorageSync("highestScore") || 0;
-    this.setData({ highestScore });
+    this.loadStats();
     this.startNewRound();
+  },
+
+  onShow() {
+    if (this.data.operands.length && !this.data.isSolved) {
+      this.startTimer();
+    }
+  },
+
+  onHide() {
+    this.stopTimer();
+  },
+
+  onUnload() {
+    this.stopTimer();
+  },
+
+  loadStats() {
+    const fastestTime = readNumber("fastestTime");
+
+    this.setData({
+      highestLevel: readNumber("highestLevel"),
+      totalCorrect: readNumber("totalCorrect"),
+      fastestTime,
+      fastestTimeText: formatTime(fastestTime)
+    });
+  },
+
+  startTimer() {
+    this.stopTimer();
+    this.timer = setInterval(() => {
+      if (!this.roundStartedAt || this.data.isSolved) {
+        return;
+      }
+
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - this.roundStartedAt) / 1000));
+      this.setData({
+        elapsedSeconds,
+        elapsedTimeText: formatTime(elapsedSeconds)
+      });
+    }, 1000);
+  },
+
+  stopTimer() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   },
 
   startNewRound() {
@@ -45,8 +111,9 @@ Page({
     }));
 
     this.history = [];
+    this.roundStartedAt = Date.now();
     this.setData({
-      round: this.data.round + 1,
+      level: this.data.level + 1,
       operands: clone(originalCards),
       originalCards,
       selectedIds: [],
@@ -54,20 +121,24 @@ Page({
       moveLogs: [],
       statusText: "点击两张牌，再选择运算符。",
       solution: problem.solution,
-      isSolved: false
+      isSolved: false,
+      elapsedSeconds: 0,
+      elapsedTimeText: "0s"
     });
+    this.startTimer();
   },
 
   restartRound() {
     if (this.data.isSolved) {
       wx.showToast({
-        title: "已完成，请下一题",
+        title: "已完成，请换一题",
         icon: "none"
       });
       return;
     }
 
     this.history = [];
+    this.roundStartedAt = Date.now();
     this.setData({
       operands: clone(this.data.originalCards).map((card) => ({
         ...card,
@@ -77,8 +148,11 @@ Page({
       selectedText: "本题已重开",
       moveLogs: [],
       statusText: "重新选择两张牌开始运算。",
-      isSolved: false
+      isSolved: false,
+      elapsedSeconds: 0,
+      elapsedTimeText: "0s"
     });
+    this.startTimer();
   },
 
   onSelect(event) {
@@ -146,6 +220,11 @@ Page({
     const right = this.data.operands.find((operand) => operand.id === selectedIds[1]);
 
     if (!left || !right) {
+      wx.showToast({
+        title: "选择已失效",
+        icon: "none"
+      });
+      this.applySelection([]);
       return;
     }
 
@@ -190,36 +269,63 @@ Page({
       `${displayOperand(left)} ${symbol} ${displayOperand(right)} = ${label}`
     );
     const solved = operands.length === 1 && solver.isTwentyFour(resultValue);
+    const failed = operands.length === 1 && !solved;
 
-    const nextData = {
+    this.setData({
       operands,
       selectedIds: [],
       selectedText: "请选择两张牌",
       moveLogs,
-      statusText: solved ? `成功得到 24：${expr}` : "继续选择两张牌。",
+      statusText: solved
+        ? `成功得到 24：${expr}`
+        : failed
+          ? "最后结果不是 24，可以撤销或重开。"
+          : "继续选择两张牌。",
       isSolved: solved
-    };
+    });
 
     if (solved) {
-      const score = this.data.score + 1;
-      const highestScore = Math.max(score, this.data.highestScore);
-      wx.setStorageSync("highestScore", highestScore);
-      nextData.score = score;
-      nextData.highestScore = highestScore;
-
-      wx.showToast({
-        title: "解出 24",
-        icon: "success"
-      });
+      this.finishRound(expr);
     }
+  },
 
-    this.setData(nextData);
+  finishRound(expr) {
+    this.stopTimer();
+
+    const usedSeconds = Math.max(1, Math.floor((Date.now() - this.roundStartedAt) / 1000));
+    const fastestTime = this.data.fastestTime
+      ? Math.min(this.data.fastestTime, usedSeconds)
+      : usedSeconds;
+    const highestLevel = Math.max(this.data.highestLevel, this.data.level);
+    const totalCorrect = this.data.totalCorrect + 1;
+    const sessionCorrect = this.data.sessionCorrect + 1;
+
+    wx.setStorageSync("highestLevel", highestLevel);
+    wx.setStorageSync("totalCorrect", totalCorrect);
+    wx.setStorageSync("fastestTime", fastestTime);
+
+    this.setData({
+      highestLevel,
+      totalCorrect,
+      fastestTime,
+      fastestTimeText: formatTime(fastestTime),
+      sessionCorrect,
+      elapsedSeconds: usedSeconds,
+      elapsedTimeText: formatTime(usedSeconds)
+    });
+
+    wx.showModal({
+      title: "闯关成功",
+      content: "恭喜你，算出了24",
+      confirmText: "继续",
+      showCancel: false
+    });
   },
 
   undo() {
     if (this.data.isSolved) {
       wx.showToast({
-        title: "已完成，请下一题",
+        title: "已完成，请换一题",
         icon: "none"
       });
       return;
@@ -239,10 +345,17 @@ Page({
 
   showHint() {
     wx.showModal({
-      title: "提示",
+      title: "提示答案",
       content: this.data.solution || "这题暂时没有提示。",
       confirmText: "知道了",
       showCancel: false
+    });
+  },
+
+  voiceTodo() {
+    wx.showToast({
+      title: "语音识别敬请期待",
+      icon: "none"
     });
   },
 

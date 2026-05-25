@@ -1,11 +1,18 @@
 Page({
   data: {
-    highestScore: 0
+    highestLevel: 0,
+    totalCorrect: 0,
+    fastestTimeText: "--"
   },
 
   onShow() {
-    const highestScore = wx.getStorageSync("highestScore") || 0;
-    this.setData({ highestScore });
+    const fastestTime = wx.getStorageSync("fastestTime") || 0;
+
+    this.setData({
+      highestLevel: wx.getStorageSync("highestLevel") || 0,
+      totalCorrect: wx.getStorageSync("totalCorrect") || 0,
+      fastestTimeText: fastestTime ? `${fastestTime}s` : "--"
+    });
   },
 
   startGame() {

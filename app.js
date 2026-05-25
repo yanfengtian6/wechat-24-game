@@ -1,7 +1,9 @@
 App({
   globalData: {
     storageKeys: {
-      highestScore: "highestScore"
+      highestLevel: "highestLevel",
+      totalCorrect: "totalCorrect",
+      fastestTime: "fastestTime"
     }
   }
 });

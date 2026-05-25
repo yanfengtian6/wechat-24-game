@@ -32,12 +32,22 @@
     </view>
 
     <view class="score-board">
-      <text class="score-label">本机最高分</text>
-      <text class="score-value">{{highestScore}}</text>
+      <view class="score-mini">
+        <text class="score-label">最高关卡</text>
+        <text class="score-value">{{highestLevel}}</text>
+      </view>
+      <view class="score-mini">
+        <text class="score-label">累计答对</text>
+        <text class="score-value">{{totalCorrect}}</text>
+      </view>
+      <view class="score-mini">
+        <text class="score-label">最快用时</text>
+        <text class="score-value">{{fastestTimeText}}</text>
+      </view>
     </view>
 
     <view class="home-actions">
-      <button class="primary-button" bindtap="startGame">开始游戏</button>
+      <button class="primary-button" bindtap="startGame">开始闯关</button>
       <button class="ghost-button" bindtap="openHelp">查看帮助</button>
     </view>
   </view>

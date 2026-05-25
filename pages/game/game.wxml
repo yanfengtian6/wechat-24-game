@@ -1,16 +1,24 @@
 <view class="page game-page">
   <view class="score-strip">
     <view class="score-cell">
-      <text class="score-name">得分</text>
-      <text class="score-number">{{score}}</text>
+      <text class="score-name">关卡</text>
+      <text class="score-number">{{level}}</text>
     </view>
     <view class="score-cell">
-      <text class="score-name">最高分</text>
-      <text class="score-number">{{highestScore}}</text>
+      <text class="score-name">本局</text>
+      <text class="score-number">{{sessionCorrect}}</text>
     </view>
     <view class="score-cell">
-      <text class="score-name">题目</text>
-      <text class="score-number">{{round}}</text>
+      <text class="score-name">累计</text>
+      <text class="score-number">{{totalCorrect}}</text>
+    </view>
+    <view class="score-cell">
+      <text class="score-name">最快</text>
+      <text class="score-number small">{{fastestTimeText}}</text>
+    </view>
+    <view class="score-cell">
+      <text class="score-name">用时</text>
+      <text class="score-number small">{{elapsedTimeText}}</text>
     </view>
   </view>
 
@@ -61,8 +69,10 @@
     <button class="ghost-button" bindtap="undo">撤销</button>
     <button class="ghost-button" bindtap="restartRound">重开</button>
     <button class="ghost-button" bindtap="showHint">提示</button>
-    <button class="plain-button" bindtap="startNewRound">下一题</button>
+    <button class="plain-button" bindtap="startNewRound">换一题</button>
   </view>
+
+  <button class="voice-button" bindtap="voiceTodo" bindlongpress="voiceTodo">按住说答案（敬请期待）</button>
 
   <view class="status-panel {{isSolved ? 'success' : ''}}">
     <text>{{statusText}}</text>
